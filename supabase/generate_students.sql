@@ -1,0 +1,33 @@
+-- ============================================================
+-- Generate all 144 student accounts + admin
+-- This is a helper script — the preferred way is to use the
+-- Admin Dashboard > "Generate 144 Accounts" button which
+-- calls the API route that does this programmatically.
+--
+-- This SQL version is provided as a fallback/reference.
+-- It creates auth users via Supabase's admin API (not SQL directly).
+-- Use the admin dashboard or the API route instead.
+-- ============================================================
+
+-- Student IDs follow this pattern:
+-- Floor 2:  201A, 201B, 201C, 201D, 202A ... 204D
+-- Floor 3:  301A ... 304D
+-- ...
+-- Floor 10: 1001A ... 1004D
+
+-- This script lists all 144 expected student_ids for reference:
+-- Floor 2:  201A-D, 202A-D, 203A-D, 204A-D  (16 students)
+-- Floor 3:  301A-D, 302A-D, 303A-D, 304A-D  (16 students)
+-- Floor 4:  401A-D, 402A-D, 403A-D, 404A-D  (16 students)
+-- Floor 5:  501A-D, 502A-D, 503A-D, 504A-D  (16 students)
+-- Floor 6:  601A-D, 602A-D, 603A-D, 604A-D  (16 students)
+-- Floor 7:  701A-D, 702A-D, 703A-D, 704A-D  (16 students)
+-- Floor 8:  801A-D, 802A-D, 803A-D, 804A-D  (16 students)
+-- Floor 9:  901A-D, 902A-D, 903A-D, 904A-D  (16 students)
+-- Floor 10: 1001A-D,1002A-D,1003A-D,1004A-D (16 students)
+-- Total: 9 floors × 16 students = 144 students ✓
+
+-- NOTE: To generate accounts use Admin Dashboard > Students > Generate 144 Accounts
+-- That will create Supabase auth users with default password: Room<student_id>@hostel
+-- e.g., student 201A gets password: Room201A@hostel
+-- Admin should then prompt students to update via admin reset.
