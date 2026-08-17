@@ -2,10 +2,13 @@
 -- Mewad Jain Hostel — Washing Machine Booking System
 -- Supabase PostgreSQL Schema
 -- Run this entire file in the Supabase SQL Editor
+-- (To completely wipe and reset the database first, run reset.sql)
 -- ============================================================
 
--- Enable UUID extension
+-- Enable Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 
 -- ============================================================
 -- PROFILES TABLE

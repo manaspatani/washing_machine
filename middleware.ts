@@ -28,6 +28,11 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
+  // Public API setup route
+  if (pathname.startsWith("/api/setup")) {
+    return supabaseResponse;
+  }
+
   // Public routes
   if (pathname === "/login" || pathname === "/") {
     if (user) {

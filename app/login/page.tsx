@@ -149,16 +149,23 @@ export default function LoginPage() {
               setLoading(true);
               try {
                 const res = await fetch("/api/setup");
-                const data = await res.json();
+                let data;
+                try {
+                  data = await res.json();
+                } catch {
+                  toast.error("Failed to parse setup API response.");
+                  setLoading(false);
+                  return;
+                }
                 if (res.ok && data.success) {
                   toast.success("Admin account created/reset! Log in with ID: admin / Password: admin@123");
                   setStudentId("admin");
                   setPassword("admin@123");
                 } else {
-                  toast.error(data.error || "Setup failed. Check .env.local configuration.");
+                  toast.error(data.error || data.details || "Setup failed. Check .env.local configuration.");
                 }
-              } catch (e) {
-                toast.error("Failed to connect to setup API.");
+              } catch (e: any) {
+                toast.error(e?.message || "Failed to connect to setup API.");
               } finally {
                 setLoading(false);
               }
