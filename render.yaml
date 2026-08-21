@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: washing-machine-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WHATSAPP_API_URL
+        sync: false
+      - key: WHATSAPP_API_KEY
+        sync: false
+      - key: WHATSAPP_SENDER_NUMBER
+        sync: false

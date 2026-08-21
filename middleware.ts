@@ -4,9 +4,27 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+
+  // Handle CORS preflight request
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -59,6 +77,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard/book", request.url));
     }
   }
+
+  supabaseResponse.headers.set("Access-Control-Allow-Origin", "*");
+  supabaseResponse.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+  );
+  supabaseResponse.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With"
+  );
 
   return supabaseResponse;
 }
