@@ -46,7 +46,8 @@ npm install
 ### 3. Setup Supabase Project
 1. Create a new project in your Supabase Dashboard.
 2. In your Supabase SQL Editor, run the contents of [`supabase/schema.sql`](file:///c:/Users/Asus/OneDrive/Documents/GitHub/washing_machine/supabase/schema.sql).
-3. Next, run [`supabase/seed.sql`](file:///c:/Users/Asus/OneDrive/Documents/GitHub/washing_machine/supabase/seed.sql) to populate initial time slots and machine records.
+3. Next, run [`supabase/seed.sql`](file:///c:/Users/Asus/OneDrive/Documents/GitHub/washing_machine/supabase/seed.sql) to populate initial time slots, machine records, and auto-create the admin account.
+*(Note: If you ever need to completely wipe and reset the database and auth accounts, run [`supabase/reset.sql`](file:///c:/Users/Manthan%20Railkar/Desktop/Git/washing_machine/supabase/reset.sql) first).*
 
 ### 4. Admin Account Initialization
 The Admin account is **automatically created** when you run `supabase/seed.sql` in step 3!
