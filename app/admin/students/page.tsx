@@ -44,9 +44,18 @@ export default function AdminStudentsPage() {
 
   async function fetchStudents() {
     setLoading(true);
-    const res = await fetch(`/api/admin/students?search=${encodeURIComponent(search)}`);
-    const json = await res.json();
-    if (res.ok) setStudents(json.students || []);
+    try {
+      const res = await fetch(`/api/admin/students?search=${encodeURIComponent(search)}`);
+      const json = await res.json();
+      if (res.ok) {
+        setStudents(json.students || []);
+      } else {
+        toast.error(json.error || "Failed to load students list.");
+        setStudents([]);
+      }
+    } catch {
+      toast.error("Failed to connect to server.");
+    }
     setLoading(false);
   }
 
@@ -58,17 +67,24 @@ export default function AdminStudentsPage() {
   async function generateAll() {
     if (!confirm("This will create all 144 hostel student accounts. Existing accounts will be skipped. Continue?")) return;
     setGenerating(true);
-    const res = await fetch("/api/admin/students", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "generate" }),
-    });
-    const json = await res.json();
-    if (res.ok) {
-      toast.success(`Created: ${json.created}, Skipped: ${json.skipped}${json.errors?.length ? `, Errors: ${json.errors.length}` : ""}`);
-      fetchStudents();
-    } else {
-      toast.error("Generation failed.");
+    try {
+      const res = await fetch("/api/admin/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate" }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        toast.success(`Created: ${json.created}, Skipped: ${json.skipped}${json.errors?.length ? `, Errors: ${json.errors.length}` : ""}`);
+        if (json.errors?.length) {
+          toast.error(`First error: ${json.errors[0]}`);
+        }
+        fetchStudents();
+      } else {
+        toast.error(json.error || "Generation failed.");
+      }
+    } catch {
+      toast.error("Generation failed due to network error.");
     }
     setGenerating(false);
   }
@@ -106,9 +122,12 @@ export default function AdminStudentsPage() {
       const json = await res.json();
       if (res.ok) {
         toast.success(`Imported ${json.created} students. Skipped: ${json.skipped}`);
+        if (json.errors?.length) {
+          toast.error(`Error: ${json.errors[0]}`);
+        }
         fetchStudents();
       } else {
-        toast.error("Import failed.");
+        toast.error(json.error || "Import failed.");
       }
     } catch (err) {
       toast.error("Failed to parse file.");
