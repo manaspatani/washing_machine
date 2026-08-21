@@ -25,61 +25,52 @@ async function handleSetup() {
     }
 
     const adminPassword = "admin@123";
-    const primaryEmail = "admin_hostel@hostel.local";
-    const legacyEmail = "admin@hostel.local";
+    const emails = ["admin@hostel.local", "admin_hostel@hostel.local"];
+    let primaryUserId: string | null = null;
 
-    let adminUser: any = null;
-
-    // 1. Try finding existing user by email
+    // 1. Fetch existing users list
     const { data: usersData } = await adminSupabase.auth.admin.listUsers();
-    if (usersData?.users) {
-      adminUser = usersData.users.find((u) => u.email === primaryEmail || u.email === legacyEmail) || null;
-    }
+    const existingUsers = usersData?.users || [];
 
-    // 2. If existing user found, update their password
-    if (adminUser) {
-      await adminSupabase.auth.admin.updateUserById(adminUser.id, {
-        password: adminPassword,
-        user_metadata: {
-          student_id: "admin",
-          name: "Hostel Admin",
-          room_number: "Office",
-          phone: "",
-          role: "admin",
-        },
-      });
-    } else {
-      // Create admin_hostel@hostel.local
-      const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
-        email: primaryEmail,
-        password: adminPassword,
-        email_confirm: true,
-        user_metadata: {
-          student_id: "admin",
-          name: "Hostel Admin",
-          room_number: "Office",
-          phone: "",
-          role: "admin",
-        },
-      });
-
-      if (!createError && newUser?.user) {
-        adminUser = newUser.user;
+    for (const email of emails) {
+      const existing = existingUsers.find((u) => u.email === email);
+      if (existing) {
+        await adminSupabase.auth.admin.updateUserById(existing.id, {
+          password: adminPassword,
+          email_confirm: true,
+          user_metadata: {
+            student_id: "admin",
+            name: "Hostel Admin",
+            room_number: "Office",
+            phone: "",
+            role: "admin",
+          },
+        });
+        if (!primaryUserId) primaryUserId = existing.id;
+      } else {
+        const { data: newUser } = await adminSupabase.auth.admin.createUser({
+          email,
+          password: adminPassword,
+          email_confirm: true,
+          user_metadata: {
+            student_id: "admin",
+            name: "Hostel Admin",
+            room_number: "Office",
+            phone: "",
+            role: "admin",
+          },
+        });
+        if (newUser?.user && !primaryUserId) {
+          primaryUserId = newUser.user.id;
+        }
       }
     }
 
-    // 3. Check existing profile row or create profile
-    const { data: existingProfile } = await adminSupabase
-      .from("profiles")
-      .select("*")
-      .eq("student_id", "admin")
-      .maybeSingle();
-
-    const targetId = adminUser?.id || existingProfile?.id;
-    if (targetId) {
+    // 2. Ensure profile exists and role = 'admin'
+    if (primaryUserId) {
       await adminSupabase.from("profiles").upsert(
         {
-          id: targetId,
+          id: primaryUserId,
           student_id: "admin",
           name: "Hostel Admin",
           room_number: "Office",
@@ -94,8 +85,8 @@ async function handleSetup() {
 
     return NextResponse.json({
       success: true,
-      message: "Admin account setup successfully! You can now log in with ID: admin, Password: password",
-      adminId: targetId || null,
+      message: "Admin account setup successfully! You can now log in with ID: admin, Password: admin@123",
+      adminId: primaryUserId,
     });
   } catch (err: any) {
     return NextResponse.json(

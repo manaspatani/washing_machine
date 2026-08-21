@@ -37,18 +37,24 @@ export default function LoginPage() {
         data = fallback.data;
         error = null;
       } else {
-        // Auto-trigger setup endpoint if admin needs account initialization
+        // Auto-trigger setup endpoint if admin needs account initialization or password reset
         try {
           await fetch("/api/setup", { method: "POST" });
-          const retry = await supabase.auth.signInWithPassword({
-            email: "admin_hostel@hostel.local",
+          let retry = await supabase.auth.signInWithPassword({
+            email: "admin@hostel.local",
             password,
           });
+          if (retry.error) {
+            retry = await supabase.auth.signInWithPassword({
+              email: "admin_hostel@hostel.local",
+              password,
+            });
+          }
           if (!retry.error) {
             data = retry.data;
             error = null;
           }
-        } catch (e) {
+        } catch {
           // Continue to error check below
         }
       }
