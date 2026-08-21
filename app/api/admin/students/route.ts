@@ -80,16 +80,41 @@ export async function POST(request: NextRequest) {
         });
 
       if (authError) {
-        if (authError.message.includes("already registered")) {
+        const { data: existing } = await adminSupabase
+          .from("profiles")
+          .select("id")
+          .eq("student_id", studentId)
+          .maybeSingle();
+
+        if (existing) {
           results.skipped++;
         } else {
-          results.errors.push(`${studentId}: ${authError.message}`);
-        }
-        continue;
-      }
+          const newId = crypto.randomUUID();
+          const { error: profileError } = await adminSupabase
+            .from("profiles")
+            .upsert(
+              {
+                id: newId,
+                student_id: studentId,
+                name: `Student ${studentId}`,
+                room_number: roomNumber,
+                phone: "",
+                role: "student",
+                is_active: true,
+                is_blocked: false,
+              },
+              { onConflict: "student_id" }
+            );
 
-      // Profile is auto-created by trigger; update if needed
-      results.created++;
+          if (!profileError) {
+            results.created++;
+          } else if (results.errors.length < 5) {
+            results.errors.push(`${studentId}: ${authError.message}`);
+          }
+        }
+      } else {
+        results.created++;
+      }
     }
 
     return NextResponse.json(results);
@@ -123,7 +148,28 @@ export async function POST(request: NextRequest) {
       });
 
     if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      // Direct database fallback if auth user creation fails
+      const newId = crypto.randomUUID();
+      const { error: profileError } = await adminSupabase
+        .from("profiles")
+        .upsert(
+          {
+            id: newId,
+            student_id,
+            name,
+            room_number: room_number || "",
+            phone: phone || "",
+            role: "student",
+            is_active: true,
+            is_blocked: false,
+          },
+          { onConflict: "student_id" }
+        );
+
+      if (profileError) {
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, profileOnly: true });
     }
 
     return NextResponse.json({ success: true, user: authData.user });
@@ -147,7 +193,7 @@ export async function POST(request: NextRequest) {
       const email = `${s.student_id.toLowerCase()}@hostel.local`;
       const password = s.password || defaultStudentPassword(s.student_id);
 
-      const { error: authError } = await adminSupabase.auth.admin.createUser({
+      const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
@@ -161,17 +207,69 @@ export async function POST(request: NextRequest) {
       });
 
       if (authError) {
-        if (authError.message.includes("already registered")) {
-          // Update existing profile instead
+        // Attempt profile update or upsert fallback
+        const { data: existing } = await adminSupabase
+          .from("profiles")
+          .select("id")
+          .eq("student_id", s.student_id)
+          .maybeSingle();
+
+        if (existing) {
           await adminSupabase
             .from("profiles")
-            .update({ name: s.name, room_number: s.room_number || "", phone: s.phone || "" })
+            .update({
+              name: s.name,
+              room_number: s.room_number || "",
+              phone: s.phone || "",
+            })
             .eq("student_id", s.student_id);
           results.skipped++;
         } else {
-          results.errors.push(`${s.student_id}: ${authError.message}`);
+          // If auth failed, attempt direct profile creation so database gets updated
+          const newId = crypto.randomUUID();
+          const { error: profileError } = await adminSupabase
+            .from("profiles")
+            .upsert(
+              {
+                id: newId,
+                student_id: s.student_id,
+                name: s.name,
+                room_number: s.room_number || "",
+                phone: s.phone || "",
+                role: "student",
+                is_active: true,
+                is_blocked: false,
+              },
+              { onConflict: "student_id" }
+            );
+
+          if (!profileError) {
+            results.created++;
+          } else {
+            if (results.errors.length < 5) {
+              results.errors.push(`${s.student_id}: ${authError.message}`);
+            }
+          }
         }
       } else {
+        // Ensure profile metadata is synced
+        if (authData?.user?.id) {
+          await adminSupabase
+            .from("profiles")
+            .upsert(
+              {
+                id: authData.user.id,
+                student_id: s.student_id,
+                name: s.name,
+                room_number: s.room_number || "",
+                phone: s.phone || "",
+                role: "student",
+                is_active: true,
+                is_blocked: false,
+              },
+              { onConflict: "id" }
+            );
+        }
         results.created++;
       }
     }

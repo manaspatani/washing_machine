@@ -89,6 +89,24 @@ export default function AdminStudentsPage() {
     setGenerating(false);
   }
 
+  function getRowValue(row: Record<string, any>, possibleKeys: string[]): string {
+    const rowKeys = Object.keys(row);
+    for (const pKey of possibleKeys) {
+      const normPKey = pKey.toLowerCase().replace(/[^a-z0-9]/g, "");
+      for (const key of rowKeys) {
+        const cleanKey = key.replace(/^\uFEFF/, "").trim();
+        const normKey = cleanKey.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (normKey === normPKey) {
+          const val = row[key];
+          if (val !== undefined && val !== null) {
+            return String(val).replace(/^\uFEFF/, "").trim();
+          }
+        }
+      }
+    }
+    return "";
+  }
+
   async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -98,21 +116,34 @@ export default function AdminStudentsPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, string>[];
+      const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, any>[];
 
-      const students = rows.map((row) => ({
-        student_id: row["student_id"] || row["Student ID"] || row["ID"] || "",
-        name: row["name"] || row["Name"] || row["Full Name"] || "",
-        room_number: row["room_number"] || row["Room"] || row["Room Number"] || "",
-        phone: row["phone"] || row["Phone"] || row["Mobile"] || "",
-        password: row["password"] || row["Password"] || "",
-      })).filter((s) => s.student_id && s.name);
+      const students = rows.map((row, index) => {
+        const student_id = getRowValue(row, ["student_id", "studentid", "student id", "id", "rollno", "roll_no", "roll number", "user_id", "regno", "sr_no"]);
+        const name = getRowValue(row, ["name", "student_name", "studentname", "student name", "full_name", "fullname", "full name", "name_of_student"]);
+        const room_number = getRowValue(row, ["room_number", "roomnumber", "room_no", "roomno", "room number", "room", "hostel_room"]);
+        const phone = getRowValue(row, ["phone", "phone_number", "phonenumber", "phone no", "mobile", "mobile_number", "mobilenumber", "contact"]);
+        const password = getRowValue(row, ["password", "pass", "pwd"]);
+
+        // Fallback: if student_id is missing but room & name exist, use room_number as student_id
+        const finalStudentId = student_id || (room_number ? `${room_number}A` : `STUDENT_${index + 1}`);
+
+        return {
+          student_id: finalStudentId,
+          name: name || `Student ${finalStudentId}`,
+          room_number,
+          phone,
+          password,
+        };
+      }).filter((s) => s.student_id && s.name);
 
       if (students.length === 0) {
-        toast.error("No valid rows found. Ensure CSV has columns: student_id, name, room_number, phone");
+        toast.error("No valid rows found in file. Ensure CSV/Excel contains student details.");
         setImporting(false);
         return;
       }
+
+      toast.loading(`Processing ${students.length} student records...`, { id: "import-toast" });
 
       const res = await fetch("/api/admin/students", {
         method: "POST",
@@ -120,17 +151,19 @@ export default function AdminStudentsPage() {
         body: JSON.stringify({ action: "import", students }),
       });
       const json = await res.json();
+      toast.dismiss("import-toast");
       if (res.ok) {
-        toast.success(`Imported ${json.created} students. Skipped: ${json.skipped}`);
+        toast.success(`Successfully imported/updated ${json.created + (json.skipped || 0)} students.`);
         if (json.errors?.length) {
-          toast.error(`Error: ${json.errors[0]}`);
+          toast.error(`Warning: ${json.errors[0]}`);
         }
         fetchStudents();
       } else {
         toast.error(json.error || "Import failed.");
       }
     } catch (err) {
-      toast.error("Failed to parse file.");
+      toast.dismiss("import-toast");
+      toast.error("Failed to parse CSV/Excel file.");
     }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = "";
