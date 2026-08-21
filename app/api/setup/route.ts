@@ -24,7 +24,7 @@ async function handleSetup() {
       );
     }
 
-    const adminPassword = "password";
+    const adminPassword = "admin@123";
     const primaryEmail = "admin_hostel@hostel.local";
     const legacyEmail = "admin@hostel.local";
 

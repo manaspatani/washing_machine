@@ -48,19 +48,12 @@ npm install
 2. In your Supabase SQL Editor, run the contents of [`supabase/schema.sql`](file:///c:/Users/Asus/OneDrive/Documents/GitHub/washing_machine/supabase/schema.sql).
 3. Next, run [`supabase/seed.sql`](file:///c:/Users/Asus/OneDrive/Documents/GitHub/washing_machine/supabase/seed.sql) to populate initial time slots and machine records.
 
-### 4. Create Admin Account
-In Supabase Dashboard -> **Authentication** -> **Users**:
-1. Click **Add User** -> **Create User**.
-2. Email: `admin@hostel.local`
-3. Password: `admin@123` (or a strong password of your choice).
-4. Run the following SQL query in the Supabase SQL Editor (replace `<ADMIN_UUID>` with the User ID generated in Supabase Auth):
+### 4. Admin Account Initialization
+The Admin account is **automatically created** when you run `supabase/seed.sql` in step 3!
+- **Default Admin ID**: `admin` (or `admin@hostel.local`)
+- **Default Password**: `admin@123`
 
-```sql
-INSERT INTO public.profiles (id, student_id, name, room_number, phone, role)
-VALUES ('<ADMIN_UUID>', 'admin', 'Hostel Admin', 'Office', '', 'admin');
-```
-
-> **Security Warning**: For production deployments, change the admin password immediately!
+> **Security Warning**: For production deployments, log in as admin and change the password!
 
 ### 5. Set Environment Variables
 Copy `.env.local.example` to `.env.local`:

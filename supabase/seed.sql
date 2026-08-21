@@ -27,10 +27,70 @@ INSERT INTO public.machines (name, display_name, is_available) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================
--- ADMIN USER INITIALIZATION
--- Note: Admin user creation should NOT be done via direct SQL INSERT into auth.users,
--- because GoTrue requires matching auth.identities records.
--- Use the /api/setup endpoint (or click "Initialize / Reset Admin Account" in the app)
--- to create the admin account safely via the Supabase Admin API.
+-- AUTOMATIC ADMIN USER INITIALIZATION
+-- Auto-creates admin account (ID: admin, Password: admin@123)
 -- ============================================================
+DO $$
+DECLARE
+  v_admin_id UUID := '00000000-0000-0000-0000-000000000001'::UUID;
+  v_email TEXT := 'admin@hostel.local';
+  v_password TEXT := 'admin@123';
+BEGIN
+  -- 1. Insert into auth.users
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = v_email OR id = v_admin_id) THEN
+    INSERT INTO auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      v_admin_id,
+      'authenticated',
+      'authenticated',
+      v_email,
+      crypt(v_password, gen_salt('bf')),
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}',
+      '{"student_id": "admin", "name": "Hostel Admin", "room_number": "Office", "role": "admin"}',
+      NOW(),
+      NOW()
+    );
+  END IF;
+
+  -- 2. Insert into auth.identities
+  IF NOT EXISTS (SELECT 1 FROM auth.identities WHERE user_id = v_admin_id) THEN
+    INSERT INTO auth.identities (
+      id,
+      user_id,
+      identity_data,
+      provider,
+      last_sign_in_at,
+      created_at,
+      updated_at,
+      provider_id
+    ) VALUES (
+      v_admin_id,
+      v_admin_id,
+      format('{"sub":"%s","email":"%s"}', v_admin_id, v_email)::jsonb,
+      'email',
+      NOW(),
+      NOW(),
+      NOW(),
+      v_email
+    );
+  END IF;
+
+  -- 3. Insert into public.profiles
+  INSERT INTO public.profiles (id, student_id, name, room_number, phone, role, is_active, is_blocked)
+  VALUES (v_admin_id, 'admin', 'Hostel Admin', 'Office', '', 'admin', true, false)
+  ON CONFLICT (id) DO UPDATE SET role = 'admin', student_id = 'admin';
+END $$;
 
