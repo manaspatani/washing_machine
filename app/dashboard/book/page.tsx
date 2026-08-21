@@ -25,12 +25,12 @@ interface BookingEntry {
   machine_id: string;
   slot_id: string;
   student_id: string;
-  profiles: {
+  profiles?: {
     name: string;
     room_number: string;
     phone: string;
     student_id: string;
-  };
+  } | null;
 }
 
 interface SlotData {
@@ -361,28 +361,19 @@ export default function BookPage() {
               {/* View booking details */}
               {modal.type === "view" && modal.booking && (
                 <div>
-                  <p className="text-sm text-muted mb-4">Booked by</p>
-                  <p className="font-semibold">{modal.booking.profiles.name}</p>
-                  <p className="text-sm text-muted">
-                    Room {modal.booking.profiles.room_number}
+                  <p className="text-sm text-muted mb-2">Booked by</p>
+                  <p className="font-semibold" style={{ fontSize: "1.05rem" }}>
+                    {modal.booking.profiles?.name || "Student"}
                   </p>
-
-                  {!showPhone ? (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setShowPhone(true)}
-                      style={{ marginTop: 10 }}
-                    >
-                      Show Phone Number
-                    </button>
-                  ) : (
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ marginTop: 8, color: "var(--primary)" }}
-                    >
-                      📞 {modal.booking.profiles.phone || "Not provided"}
-                    </p>
-                  )}
+                  <p className="text-sm text-muted" style={{ marginTop: 4 }}>
+                    Room {modal.booking.profiles?.room_number || "N/A"}
+                  </p>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ marginTop: 8, color: "var(--primary)" }}
+                  >
+                    📞 {modal.booking.profiles?.phone || "Not provided"}
+                  </p>
 
                   {modal.isMyBooking && (
                     <div

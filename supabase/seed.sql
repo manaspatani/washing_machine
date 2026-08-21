@@ -27,46 +27,10 @@ INSERT INTO public.machines (name, display_name, is_available) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================
--- ADMIN USER CREATION (ID: admin, Password: admin@123)
--- Creates admin in auth.users and public.profiles
+-- ADMIN USER INITIALIZATION
+-- Note: Admin user creation should NOT be done via direct SQL INSERT into auth.users,
+-- because GoTrue requires matching auth.identities records.
+-- Use the /api/setup endpoint (or click "Initialize / Reset Admin Account" in the app)
+-- to create the admin account safely via the Supabase Admin API.
 -- ============================================================
 
-DO $$
-DECLARE
-  v_admin_id UUID := uuid_generate_v4();
-BEGIN
-  -- Insert into auth.users if admin doesn't exist
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@hostel.local') THEN
-    INSERT INTO auth.users (
-      instance_id,
-      id,
-      aud,
-      role,
-      email,
-      encrypted_password,
-      email_confirmed_at,
-      raw_app_meta_data,
-      raw_user_meta_data,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      '00000000-0000-0000-0000-000000000000',
-      v_admin_id,
-      'authenticated',
-      'authenticated',
-      'admin@hostel.local',
-      crypt('admin@123', gen_salt('bf')),
-      NOW(),
-      '{"provider":"email","providers":["email"]}',
-      '{"student_id":"admin","name":"Hostel Admin","room_number":"Office","phone":"","role":"admin"}',
-      NOW(),
-      NOW()
-    );
-
-    -- Insert into public.profiles
-    INSERT INTO public.profiles (id, student_id, name, room_number, phone, role, is_active, is_blocked)
-    VALUES (v_admin_id, 'admin', 'Hostel Admin', 'Office', '', 'admin', true, false)
-    ON CONFLICT (id) DO UPDATE SET role = 'admin', student_id = 'admin';
-  END IF;
-END $$;

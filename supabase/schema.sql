@@ -151,20 +151,28 @@ BEGIN
   INSERT INTO public.profiles (id, student_id, name, room_number, phone, role)
   VALUES (
     NEW.id,
-    NEW.raw_user_meta_data->>'student_id',
+    COALESCE(NEW.raw_user_meta_data->>'student_id', 'user_' || substring(NEW.id::text from 1 for 8)),
     COALESCE(NEW.raw_user_meta_data->>'name', 'Unknown'),
     NEW.raw_user_meta_data->>'room_number',
     NEW.raw_user_meta_data->>'phone',
     COALESCE(NEW.raw_user_meta_data->>'role', 'student')
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    student_id = EXCLUDED.student_id,
+    name = EXCLUDED.name,
+    role = EXCLUDED.role;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Prevent any trigger error from rolling back auth user creation transaction
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 
 -- ============================================================
 -- ATOMIC BOOKING FUNCTION
@@ -457,10 +465,10 @@ ALTER TABLE public.machines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.time_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_logs ENABLE ROW LEVEL SECURITY;
 
--- Profiles: users see their own; admin sees all (handled via service role in API)
-CREATE POLICY "Users can view own profile"
+-- Profiles: all authenticated users can view student profiles (for slot booking info)
+CREATE POLICY "Anyone authenticated can view profiles"
   ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
+  USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE

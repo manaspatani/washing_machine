@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { adminSupabase } from "@/lib/supabase/admin";
 
 // GET /api/bookings?date=YYYY-MM-DD
 // Returns all slot statuses for a given date (both machines)
@@ -19,19 +20,19 @@ export async function GET(request: NextRequest) {
   }
 
   // Get all time slots
-  const { data: slots } = await supabase
+  const { data: slots } = await adminSupabase
     .from("time_slots")
     .select("*")
     .order("slot_index");
 
   // Get all machines
-  const { data: machines } = await supabase
+  const { data: machines } = await adminSupabase
     .from("machines")
     .select("*")
     .order("name");
 
   // Get all active bookings for this date with student details
-  const { data: bookings } = await supabase
+  const { data: bookings } = await adminSupabase
     .from("bookings")
     .select(`
       id,
